@@ -10,7 +10,6 @@
       - docker-compose.yml
       - inventory.ini
   tasks:
-    # Ensure the target directory exists
     - name: Ensure the target directory exists
       ansible.builtin.file:
         path: "{{ remote_dir }}"
@@ -19,58 +18,51 @@
         group: ubuntu
         mode: '0755'
 
-    # Copy files to the remote server
     - name: Copy files to remote server
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: "{{ remote_dir }}/"
       loop: "{{ local_files }}"
 
-    # Extract .gz files
     - name: Extract .gz files
       ansible.builtin.shell:
-        cmd: gunzip -f {{ remote_dir }}/*.gz
-      args:
-        warn: false
+        cmd: >
+          for file in {{ remote_dir }}/*.gz; do gunzip -f "$file"; done
+        args:
+          executable: /bin/bash
 
-    # Load Docker client image
     - name: Load Docker client image
       ansible.builtin.shell:
         cmd: docker load < {{ remote_dir }}/artstyle-client.tar
-      args:
-        warn: false
+        args:
+          executable: /bin/bash
 
-    # Load Docker server image
     - name: Load Docker server image
       ansible.builtin.shell:
         cmd: docker load < {{ remote_dir }}/artstyle-server.tar
-      args:
-        warn: false
+        args:
+          executable: /bin/bash
 
-    # Find all .tar files in the directory
     - name: Find all .tar files in the directory
       ansible.builtin.find:
         paths: "{{ remote_dir }}"
         patterns: "*.tar*"
       register: tar_files
 
-    # Remove all .tar files
     - name: Remove all .tar files
       ansible.builtin.file:
         path: "{{ item.path }}"
         state: absent
       loop: "{{ tar_files.files }}"
 
-    # Replace API_URL in .env file
     - name: Replace API_URL in .env file
       ansible.builtin.lineinfile:
         path: "{{ remote_dir }}/.env"
         regexp: '^API_URL=.*'
         line: "API_URL=http://{{ ansible_host }}:8000"
 
-    # Start Docker Compose
     - name: Start Docker Compose
       ansible.builtin.shell:
         cmd: docker-compose -f {{ remote_dir }}/docker-compose.yml up -d
-      args:
-        chdir: "{{ remote_dir }}"
+        args:
+          executable: /bin/bash
