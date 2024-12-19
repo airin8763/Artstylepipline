@@ -25,23 +25,17 @@
       loop: "{{ local_files }}"
 
     - name: Extract .gz files
-      ansible.builtin.shell:
-        cmd: >
-          for file in {{ remote_dir }}/*.gz; do gunzip -f "$file"; done
-        args:
-          executable: /bin/bash
+      ansible.builtin.shell: |
+        for file in {{ remote_dir }}/*.gz; do
+          gunzip -f "$file"
+        done
+      register: extract_result
 
     - name: Load Docker client image
-      ansible.builtin.shell:
-        cmd: docker load < {{ remote_dir }}/artstyle-client.tar
-        args:
-          executable: /bin/bash
+      ansible.builtin.shell: docker load < {{ remote_dir }}/artstyle-client.tar
 
     - name: Load Docker server image
-      ansible.builtin.shell:
-        cmd: docker load < {{ remote_dir }}/artstyle-server.tar
-        args:
-          executable: /bin/bash
+      ansible.builtin.shell: docker load < {{ remote_dir }}/artstyle-server.tar
 
     - name: Find all .tar files in the directory
       ansible.builtin.find:
@@ -62,7 +56,4 @@
         line: "API_URL=http://{{ ansible_host }}:8000"
 
     - name: Start Docker Compose
-      ansible.builtin.shell:
-        cmd: docker-compose -f {{ remote_dir }}/docker-compose.yml up -d
-        args:
-          executable: /bin/bash
+      ansible.builtin.shell: docker-compose -f {{ remote_dir }}/docker-compose.yml up -d
